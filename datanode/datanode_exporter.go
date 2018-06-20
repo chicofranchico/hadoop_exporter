@@ -142,24 +142,28 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 // Collect implements the prometheus.Collector interface.
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	resp, err := http.Get(e.url)
+
+  if resp != nil {
+    defer resp.Body.Close()
+  }
 	if err != nil {
 		log.Error(err)
+		return
 	}
-	defer resp.Body.Close()
+
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Error(err)
+		return
 	}
+
 	var f interface{}
 	err = json.Unmarshal(data, &f)
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	if len(data) == 0 || f == nil {
-	  log.Error("Empty.")
-	  return
-	}
+
 	// {"beans":[{"name":"Hadoop:service=NameNode,name=FSNamesystem", ...}, {"name":"java.lang:type=MemoryPool,name=Code Cache", ...}, ...]}
 	m := f.(map[string]interface{})
 	// [{"name":"Hadoop:service=NameNode,name=FSNamesystem", ...}, {"name":"java.lang:type=MemoryPool,name=Code Cache", ...}, ...]
