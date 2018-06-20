@@ -154,6 +154,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	err = json.Unmarshal(data, &f)
 	if err != nil {
 		log.Error(err)
+		return
 	}
 	if len(data) == 0 || f == nil {
 	  log.Error("Empty.")
