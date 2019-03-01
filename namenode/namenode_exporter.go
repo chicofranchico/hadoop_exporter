@@ -43,6 +43,7 @@ type Exporter struct {
 	heapMemoryUsageUsed      prometheus.Gauge
 	lastHATransitionTime     prometheus.Gauge
 	state                    prometheus.Gauge
+	isActive                 prometheus.Gauge
 }
 
 func NewExporter(url string) *Exporter {
@@ -153,6 +154,11 @@ func NewExporter(url string) *Exporter {
 			Name:      "state",
 			Help:      "Current namenode state, 1 if active 0 if standby",
 		}),
+		isActive: prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: namespace,
+			Name:      "isActive",
+			Help:      "isActive",
+		}),
 	}
 }
 
@@ -179,6 +185,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	e.heapMemoryUsageUsed.Describe(ch)
 	e.lastHATransitionTime.Describe(ch)
 	e.state.Describe(ch)
+	e.isActive.Describe(ch)
 }
 
 // Collect implements the prometheus.Collector interface.
@@ -305,6 +312,15 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			e.heapMemoryUsageMax.Set(heapMemoryUsage["max"].(float64))
 			e.heapMemoryUsageUsed.Set(heapMemoryUsage["used"].(float64))
 		}
+
+		if nameDataMap["name"] == "Hadoop:service=NameNode,name=FSNamesystem" {
+			if nameDataMap["tag.HAState"] == "active" {
+				e.isActive.Set(1)
+			} else {
+				e.isActive.Set(0)
+			}
+		}
+
 	}
 	e.MissingBlocks.Collect(ch)
 	e.UnderReplicatedBlocks.Collect(ch)
@@ -327,6 +343,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	e.heapMemoryUsageUsed.Collect(ch)
 	e.lastHATransitionTime.Collect(ch)
 	e.state.Collect(ch)
+	e.isActive.Collect(ch)
 }
 
 func main() {

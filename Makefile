@@ -1,64 +1,15 @@
-SHELL := /bin/bash
-
-REV := $(shell git rev-parse HEAD)
-CHANGES := $(shell test -n "$$(git status --porcelain)" && echo '-CHANGES' || true)
-VERSION := $(shell cat ./VERSION)
-DOCKER_REPO := quay.io/tamr/hdfs_exporter
-DOCKER_TAG := $(shell cat ./VERSION)
-
-
-.PHONY: \
-	clean \
-	clean-vendor \
-	deps \
-	test \
-	vet \
-	lint \
-	build-namenode \
-	build-resourcemanager \
-	build-journalnode \
-	build
-
-all: fmt vet build
-
-clean-vendor:
-	rm -rf ./vedor/
-
-clean: clean-vendor
+all: namenode_exporter resourcemanager_exporter
+.PHONY: all
 
 deps:
-	glide install
+	go get github.com/prometheus/client_golang/prometheus
+	go get github.com/prometheus/log
 
-test: deps
-	go test -v ./
+namenode_exporter: deps namenode_exporter.go
+	go build namenode_exporter.go
 
-vet:
-	go vet -v ./
+resourcemanager_exporter: deps resourcemanager_exporter.go
+	go build resourcemanager_exporter.go
 
-lint:
-	golint ./
-
-style:
-	gofmt -d ./
-
-build-namenode: deps
-	go fmt ./namenode
-	go build -o bin/namenode_exporter ./namenode/namenode_exporter.go
-
-build-resourcemanager: deps
-	go fmt ./resourcemanager
-	go build -o bin/resourcemanager_exporter ./resourcemanager/resourcemanager_exporter.go
-
-build-journalnode: deps
-	go fmt ./journalnode
-	go build -o bin/journalnode_exporter ./journalnode/journalnode_exporter.go
-
-build-datanode: deps
-	go fmt ./datanode
-	go build -o bin/datanode_exporter ./datanode/datanode_exporter.go
-
-build: build-namenode build-resourcemanager build-journalnode build-datanode
-
-docker-build:
-	echo "docker build tag: $(DOCKER_REPO):$(DOCKER_TAG)$(CHANGES)"
-	docker build -t $(DOCKER_REPO):$(DOCKER_TAG)$(CHANGES) .
+clean:
+	rm -rf namenode_exporter resourcemanager_exporter
